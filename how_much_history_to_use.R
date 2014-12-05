@@ -1,3 +1,4 @@
+# Some historical data for a product
 text <- "June-12  	425
 July-12		425
 August-12		418.7614
@@ -34,19 +35,34 @@ data <- read.table(text=text)
 names(data) <- c("date", "price")
 data$month <- as.numeric(row.names(data))
 
+#############################################################################
+# prediction_length: how far away you want to predict
+# history_length: how many months of history you want to use
+# For example: You have 24 months of data
+# <prediction_length=4>: you are trying to predict the pricing 4 month later
+# then the last four records will be assume unknown, then the data usable will
+# be from month 1 to 20, and your goal is to predict the 24th record
+# <history_length=8>: you are going to use the latest 8 months data
+# from the data usable, i.e month 13, 14, ... , 20. 
+##############################################################################
 myfunction <- function(prediction_length, history_length, mydata){
   data.train <- head(mydata, nrow(mydata) - prediction_length)
   data.train.used <- tail(data.train, history_length)
+  # build an exponential model where
+  # price=exp(const_a * month + const_b)
   m <- lm(data=data.train.used, log(price) ~ month)
   #print(row.names(data.train.used))
   prediction_bin <- function(x) {exp(m$coefficients[1] + x * m$coefficients[2])}
   prediction <- prediction_bin( nrow(data) )
   actual <- tail(data.train, 1)$price
+  # negative error rate means under predict the pricing 
   error <- (prediction - actual) / actual
   return(error)
 }
 
+
 N <- nrow(mydata)
+# generate all the possible combinations between prediction_length and history_length
 test.data <- data.frame(prediction_length=rep(1:N, each=N), history_length=rep(1:N, times=N))
 test.data <- subset(test.data, (prediction_length+history_length)  <= N)
 
